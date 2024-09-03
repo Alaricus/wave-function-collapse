@@ -295,7 +295,6 @@ const main = async () => {
             }
             neighbor.variants = neighbor.variants.filter(variant => allowed.includes(variant));
             if (neighbor.variants.length === 0) {
-              // REVISIT THIS - MAY CAUSE PROBLEMS IN A RECURSIVE SETTING
               resetTileAndNeighbors(x, y);
             }
           }
