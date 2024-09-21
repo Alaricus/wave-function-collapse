@@ -147,8 +147,8 @@ const draw = (board, tileSize) => {
 };
 
 const main = async () => {
-  const height = heightInTiles; // .value;
-  const width = widthInTiles; // .value;
+  const height = heightInTiles;
+  const width = widthInTiles;
 
   ctx.width = width * tileSize;
   ctx.height = height * tileSize;
