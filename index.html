@@ -7,22 +7,12 @@
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
-    <div class="controls">
-      <label for="width">width in tiles
-        <input id="width" max="30" min="3" type="number" value="20">
-      </label>
-      <label for="height">height in tiles
-        <input id="height" max="30" min="3" type="number" value="20">
-      </label>
-      <label for="animate">animate tile generation
-        <input id="animate" type="checkbox" checked>
-      </label>
-      <button id="reload">reload</button>
-    </div>
-    <main>
-      <canvas></canvas>
-    </main>
-    <p>assets used: <a href="https://schwarnhild.itch.io/summer-plains-tileset-and-asset-pack-32x32-pixels" target="_blank">Summer Plains 32x32</a></p>
+  <!--
+    Tileset is called "Summer Plains 32x32"
+    by "https://schwarnhild.itch.io/summer-plains-tileset-and-asset-pack-32x32-pixels
+  -->
+    <canvas></canvas>
+    <img src="./tileset.png" />
     <script src="./wave-function-collapse.js"></script>
   </body>
 </html>
