@@ -1,152 +1,101 @@
-let widthInTiles = document.querySelector('#width');
-let heightInTiles = document.querySelector('#height');
-const animateTileGeneration = document.querySelector('#animate');
-const reload = document.querySelector('#reload');
-reload.addEventListener('click', () => {
-  widthInTiles = document.querySelector('#width');
-  heightInTiles = document.querySelector('#height');
-  if (+widthInTiles.value > (+widthInTiles.getAttribute("max"))) {
-    widthInTiles.value = widthInTiles.getAttribute("max");
-  }
-  if (+widthInTiles.value < (+widthInTiles.getAttribute("min"))) {
-    widthInTiles.value = widthInTiles.getAttribute("min");
-  }
-  if (+heightInTiles.value > (+heightInTiles.getAttribute("max"))) {
-    heightInTiles.value = heightInTiles.getAttribute("max");
-  }
-  if (+heightInTiles.value < (+heightInTiles.getAttribute("min"))) {
-    heightInTiles.value = heightInTiles.getAttribute("min");
-  }
-  main();
-});
-
+const image = document.querySelector('img');
 const canvas = document.querySelector('canvas');
 const ctx = canvas.getContext('2d');
 
-let tileset = null;
+const tileSize = 32;
+let widthInTiles = Math.ceil(window.innerWidth / tileSize);
+let heightInTiles = Math.ceil(window.innerHeight / tileSize);
 
 // Coordinates (in x,y format) on each tile on the tileset image
-const tileCoordsXY = [
-  [0, 0], // NW shore
-  [1, 0], // N shore
-  [2, 0], // NE shore
-  [0, 1], // W shore
-  [1, 1], // Grass
-  [2, 1], // E shore
-  [0, 2], // SW shore
-  [1, 2], // S shore
-  [2, 2], // SE shore
-  [0, 3], // Warer
-  [3, 0], // SE bay
-  [4, 0], // SW bay
-  [3, 1], // NE bay
-  [4, 1], // NW bay
-];
-
-const edgeEnum = {
-  WATER: 0,
-  GRASS: 1,
-  N_SHORE: 2,
-  E_SHORE: 3,
-  S_SHORE: 4,
-  W_SHORE: 5,
-};
-
+const tileCoordsXY = [];
 // The keys in this object correspond to the indices of tileCoordxXY array
-const tileTypes = {
-  0: { // Northwestern shore
-    n: edgeEnum.WATER,
-    e: edgeEnum.N_SHORE,
-    s: edgeEnum.W_SHORE,
-    w: edgeEnum.WATER,
-  },
-  1: { // Northern shore
-    n: edgeEnum.WATER,
-    e: edgeEnum.N_SHORE,
-    s: edgeEnum.GRASS,
-    w: edgeEnum.N_SHORE,
-  },
-  2: { // Northeastern shore
-    n: edgeEnum.WATER,
-    e: edgeEnum.WATER,
-    s: edgeEnum.E_SHORE,
-    w: edgeEnum.N_SHORE,
-  },
-  3: { // Western shore
-    n: edgeEnum.W_SHORE,
-    e: edgeEnum.GRASS,
-    s: edgeEnum.W_SHORE,
-    w: edgeEnum.WATER,
-  },
-  4: { // Grass
-    n: edgeEnum.GRASS,
-    e: edgeEnum.GRASS,
-    s: edgeEnum.GRASS,
-    w: edgeEnum.GRASS,
-  },
-  5: { // Eastern shore
-    n: edgeEnum.E_SHORE,
-    e: edgeEnum.WATER,
-    s: edgeEnum.E_SHORE,
-    w: edgeEnum.GRASS,
-  },
-  6: { // Southwestern shore
-    n: edgeEnum.W_SHORE,
-    e: edgeEnum.S_SHORE,
-    s: edgeEnum.WATER,
-    w: edgeEnum.WATER,
-  },
-  7: { // Southern shore
-    n: edgeEnum.GRASS,
-    e: edgeEnum.S_SHORE,
-    s: edgeEnum.WATER,
-    w: edgeEnum.S_SHORE,
-  },
-  8: { // Southeastern shore
-    n: edgeEnum.E_SHORE,
-    e: edgeEnum.WATER,
-    s: edgeEnum.WATER,
-    w: edgeEnum.S_SHORE,
-  },
-  9: { // Water
-    n: edgeEnum.WATER,
-    e: edgeEnum.WATER,
-    s: edgeEnum.WATER,
-    w: edgeEnum.WATER,
-  },
-  10: { // Southeastern bay
-    n: edgeEnum.GRASS,
-    e: edgeEnum.S_SHORE,
-    s: edgeEnum.E_SHORE,
-    w: edgeEnum.GRASS,
-  },
-  11: { // Southwestern bay
-    n: edgeEnum.GRASS,
-    e: edgeEnum.GRASS,
-    s: edgeEnum.W_SHORE,
-    w: edgeEnum.S_SHORE,
-  },
-  12: { // Northeastern bay
-    n: edgeEnum.E_SHORE,
-    e: edgeEnum.N_SHORE,
-    s: edgeEnum.GRASS,
-    w: edgeEnum.GRASS,
-  },
-  13: { // Northwestern bay
-    n: edgeEnum.W_SHORE,
-    e: edgeEnum.GRASS,
-    s: edgeEnum.GRASS,
-    w: edgeEnum.N_SHORE,
-  },
-};
+const tileTypes = {};
+const allHashes = new Set();
+const edgeEnum = {};
 
-window.onload = () => {
-  const image = new Image();
-  image.src = './tileset.png';
-  tileset = image;
+const initialize = () => {
+  const osCanvas = new OffscreenCanvas(image.width, image.height);
+  const osCtx = osCanvas.getContext('2d', { willReadFrequently: true });
 
-  // WTF
-  setTimeout(main, 100);
+  osCtx.drawImage(image, 0, 0);
+
+  const tilesWide = osCtx.canvas.width / tileSize;
+  const tilesHigh = osCtx.canvas.height / tileSize;
+
+  // This is directly from MDN https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest
+  const makeHash = async (value) => {
+    const messageUint8 = new TextEncoder().encode(value);
+    const hashBuffer = await window.crypto.subtle.digest('SHA-256', messageUint8);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
+    return hashHex;
+  };
+
+  const generateHashesForTile = async (row = 1, col = 0) => {
+    // The heuristic is that tiles match if their corners match. I noticed this to be true in all the tilesets
+    // I've tested on, but this is not a guarantee, so this could create data that would cause bad generations
+    const imageDataNW = osCtx.getImageData(col * tileSize, row * tileSize, 1, 1).data;
+    const imageDataNE = osCtx.getImageData(col * tileSize + tileSize - 1, row * tileSize, 1, 1).data;
+    const imageDataSE = osCtx.getImageData(col * tileSize + tileSize - 1, row * tileSize + tileSize - 1, 1, 1).data;
+    const imageDataSW = osCtx.getImageData(col * tileSize, row * tileSize + tileSize - 1, 1, 1).data;
+
+    const northHash = await makeHash([...imageDataNW, ...imageDataNE, 'h'].join(''));
+    const eastHash = await makeHash([...imageDataNE, ...imageDataSE, 'v'].join(''));
+    const southHash = await makeHash([...imageDataSW, ...imageDataSE, 'h'].join(''));
+    const westHash = await makeHash([...imageDataNW, ...imageDataSW, 'v'].join(''));
+
+    // If any hash has both corners equal RGBA (0, 0, 0, 0) then it's probably a transparent tile,
+    // which is likely unused in the tileset and can be skipped
+    if (northHash === '1825ea3995228654b0ed685a7c7ed7710adbd944a0e3fe76bc302dfef660ee6c'
+      || southHash === '1825ea3995228654b0ed685a7c7ed7710adbd944a0e3fe76bc302dfef660ee6c'
+      || eastHash === '183030c6eaeb682d500ac9154d0426d6d0cc944cad4bb826ea113ccc50c1a8ba'
+      || westHash === '183030c6eaeb682d500ac9154d0426d6d0cc944cad4bb826ea113ccc50c1a8ba') {
+      return null;
+    }
+
+    return { n: northHash, e: eastHash, s: southHash, w: westHash };
+  };
+
+  const processTileset = async () => {
+    let counter = 0;
+    for (let i = 0; i < tilesHigh; i++) {
+      for (let j = 0; j < tilesWide; j++) {
+        const tileHashes = await generateHashesForTile(i, j);
+        if (tileHashes === null) {
+          continue;
+        }
+
+        tileTypes[counter] = {};
+
+        ['n', 'e', 's', 'w'].forEach(direction => {
+          const hash = tileHashes[direction];
+          allHashes.add(hash);
+
+          tileTypes[counter][direction] = hash;
+        })
+
+        tileCoordsXY.push([j , i]);
+        counter++;
+      }
+    }
+
+    Array.from(allHashes).forEach((hash, index) => {
+      edgeEnum[hash] = index;
+    });
+
+    for (tile in tileTypes) {
+      tileTypes[tile].n = edgeEnum[tileTypes[tile].n];
+      tileTypes[tile].s = edgeEnum[tileTypes[tile].s];
+      tileTypes[tile].e = edgeEnum[tileTypes[tile].e];
+      tileTypes[tile].w = edgeEnum[tileTypes[tile].w];
+    }
+
+    main();
+  };
+
+  processTileset();
 };
 
 const buildBoard = (rows, columns) => {
@@ -170,7 +119,7 @@ const delay = (ms) => {
 };
 
 const draw = (board, tileSize) => {
-  ctx.fillStyle = 'white';
+  ctx.fillStyle = 'black';
   ctx.strokeStyle = 'white';
   board.forEach((row, i) => {
     row.forEach((col, j) => {
@@ -185,27 +134,28 @@ const draw = (board, tileSize) => {
 
       if (cell.result !== null) {
         const [sx, sy] = tileCoordsXY[cell.result];
-        ctx.drawImage(tileset, sx * tileSize, sy * tileSize, tileSize, tileSize, x, y, tileSize, tileSize);
+        ctx.drawImage(image, sx * tileSize, sy * tileSize, tileSize, tileSize, x, y, tileSize, tileSize);
       } else {
         ctx.fillStyle = 'black';
         ctx.textAlign = 'left';
         ctx.fillText(cell.variants.length, x + ((w - ctx.measureText(cell.variants.length.toString()).width) / 2), y + 19);
       }
 
-      ctx.fillStyle = 'white';
+      ctx.fillStyle = 'black';
     });
   });
 };
 
 const main = async () => {
-  const height = heightInTiles.value;
-  const width = widthInTiles.value;
-  const tileSize = 32;
+  const height = heightInTiles; // .value;
+  const width = widthInTiles; // .value;
 
   ctx.width = width * tileSize;
   ctx.height = height * tileSize;
   ctx.canvas.width = width * tileSize;
   ctx.canvas.height = height * tileSize;
+
+  let resizeCache = {};
 
   const getLowestEntropyTile = () => {
     const lowest = board.flat().reduce((acc, cur, index) => {
@@ -220,12 +170,12 @@ const main = async () => {
       return null;
     }
 
-    const result = {
+    const lowestEntropyTile = {
       x: lowest.index % width,
       y: Math.floor(lowest.index / width)
     };
 
-    return result;
+    return lowestEntropyTile;
   };
 
   const board = buildBoard(height, width);
@@ -233,34 +183,93 @@ const main = async () => {
     x: Math.floor(Math.random() * width),
     y: Math.floor(Math.random() * height)
   };
-  const startingTileType = Math.floor(Math.random() * Object.keys(tileTypes).length);
+  const startingTileType = Math.floor(Math.random() * Object.keys(tileTypes).length); // 11 is grass
 
   board[startingTileCoords.y][startingTileCoords.x] = { result: startingTileType, variants: [] };
 
-  let resetCounter = 1;
-  let resetSize = 1;
-
   const resetTileAndNeighbors = (x, y) => {
-    console.log(`reset ${resetCounter} times, at ${resetSize * 2 + 1}x${resetSize * 2 + 1}`);
-    resetCounter++;
-    if (resetCounter > 5) {
-      resetSize++;
-      resetCounter = 1;
+    let again = null;
+    const updatedTiles = [];
+
+    // The cache is so that if the same tile keeps being problematic the area that's getting reset will grow
+    if (!resizeCache[`${x}-${y}`]) {
+      resizeCache[`${x}-${y}`] = { counter: 0, size: 1};
     }
+    resizeCache[`${x}-${y}`].counter += 1;
+    if (resizeCache[`${x}-${y}`].counter > 3) {
+      resizeCache[`${x}-${y}`].size += 1;
+      resizeCache[`${x}-${y}`].counter = 1;
+    }
+
     // Select a square around the problem tile and reset it
-    const minX = x - resetSize;
-    const maxX = x + resetSize;
-    const minY = y - resetSize;
-    const maxY = y + resetSize;
+    const minX = x - resizeCache[`${x}-${y}`].size;
+    const maxX = x + resizeCache[`${x}-${y}`].size;
+    const minY = y - resizeCache[`${x}-${y}`].size;
+    const maxY = y + resizeCache[`${x}-${y}`].size;
 
     for (let i = minY; i < maxY + 1; i++) {
       if (i > -1 && i < height) {
         for (let j = minX; j < maxX + 1; j++) {
           if (j > -1 && j < width) {
+            // Reset the tile to original state
             board[i][j] = { result: null, variants: Object.keys(tileTypes) };
+            updatedTiles.push({ x: j, y: i });
+            // console.log(`[${x}/${y}] reset ${resizeCache[`${x}-${y}`].counter} times at ${resizeCache[`${x}-${y}`].size * 2 + 1}x${resizeCache[`${x}-${y}`].size * 2 + 1}`, board[i][j]);
           }
         }
       }
+    }
+
+    // Collapse all reset tiles that have collapsed neighbors
+    for (tile of updatedTiles) {
+      if (board?.[tile.y-1]?.[tile.x]?.result) {
+        const allowed = [];
+        const neighbor = board[tile.y-1][tile.x].result;
+        for (const key in tileTypes) {
+          // Find northern types that match the south of the northern neighbor
+          if (tileTypes[key].n === tileTypes[neighbor].s) {
+            allowed.push(key);
+          }
+        }
+        board[tile.y][tile.x].variants = board[tile.y][tile.x].variants.filter(variant => allowed.includes(variant));
+      }
+
+      if (board?.[tile.y]?.[tile.x+1]?.result) {
+        const allowed = [];
+        const neighbor = board[tile.y][tile.x+1].result;
+        for (const key in tileTypes) {
+          if (tileTypes[key].e === tileTypes[neighbor].w) {
+            allowed.push(key);
+          }
+        }
+        board[tile.y][tile.x].variants = board[tile.y][tile.x].variants.filter(variant => allowed.includes(variant));
+      }
+
+      if (board?.[tile.y+1]?.[tile.x]?.result) {
+        const allowed = [];
+        const neighbor = board[tile.y+1][tile.x].result;
+        for (const key in tileTypes) {
+          if (tileTypes[key].s === tileTypes[neighbor].n) {
+            allowed.push(key);
+          }
+        }
+        board[tile.y][tile.x].variants = board[tile.y][tile.x].variants.filter(variant => allowed.includes(variant));
+      }
+
+      if (board?.[tile.y]?.[tile.x-1]?.result) {
+        const allowed = [];
+        const neighbor = board[tile.y][tile.x-1].result;
+        for (const key in tileTypes) {
+          if (tileTypes[key].w === tileTypes[neighbor].e) {
+            allowed.push(key);
+          }
+        }
+        board[tile.y][tile.x].variants = board[tile.y][tile.x].variants.filter(variant => allowed.includes(variant));
+      }
+    }
+
+    if (again) {
+      resetTileAndNeighbors(again.x, again.y);
     }
   };
 
@@ -276,17 +285,17 @@ const main = async () => {
 
       const processNeighbor = (coords, direction) => {
         let oppositeDirection = null;
-        if (direction === 'w') { oppositeDirection = 'e'};
-        if (direction === 'e') { oppositeDirection = 'w'};
         if (direction === 'n') { oppositeDirection = 's'};
+        if (direction === 'e') { oppositeDirection = 'w'};
         if (direction === 's') { oppositeDirection = 'n'};
+        if (direction === 'w') { oppositeDirection = 'e'};
         // if a west neighbor exists
         if (coords && oppositeDirection) {
           // remove variants that don't exist in tileTypes for this type of cell
           const neighbor = board[coords.y][coords.x]
           if (neighbor.result === null) {
-            // filter variants (tileTypes) by them having a correct western constraint
-            // get all tile types that match this W edge
+            // filter variants (tileTypes) by them having a correct constraint
+            // get all tile types that match this edge
             const allowed = [];
             for (const key in tileTypes) {
               if (tileTypes[key][oppositeDirection] === tileTypes[thisTile.result][direction]) {
@@ -301,10 +310,10 @@ const main = async () => {
         }
       };
 
-      processNeighbor(wNeighborCoords, 'w');
-      processNeighbor(eNeighborCoords, 'e');
       processNeighbor(nNeighborCoords, 'n');
+      processNeighbor(eNeighborCoords, 'e');
       processNeighbor(sNeighborCoords, 's');
+      processNeighbor(wNeighborCoords, 'w');
 
       // Find the tile with lowest amount of variants and randomly select one for it to collapse into
       const lowestEntropyTileCoords = getLowestEntropyTile();
@@ -316,34 +325,50 @@ const main = async () => {
       lowestEntropyTile.result = randomVariant;
 
       // Experimenting with land/water bodies chunkiness. Will probably want to replace this with weights later
+      // Adjust chunkiness of grass
+      if (lowestEntropyTile.variants.includes('10')) {
+        const percentage = Math.random();
+        if (percentage <= 0.90) {
+          lowestEntropyTile.result = '10';
+        } else {
+          lowestEntropyTile.result = randomVariant;
+        }
+      }
       // Adjust chunkiness of water
-      if (lowestEntropyTile.variants.includes('9')) {
+      if (lowestEntropyTile.variants.includes('16')) {
         const percentage = Math.random();
         if (percentage <= 0.95) {
-          lowestEntropyTile.result = '9';
+          lowestEntropyTile.result = '16';
         } else {
           lowestEntropyTile.result = randomVariant;
         }
       }
-      // Adjust chunkiness of land
-      if (lowestEntropyTile.variants.includes('4')) {
+      // Adjust chunkiness of dirt
+      if (lowestEntropyTile.variants.includes('13')) {
         const percentage = Math.random();
         if (percentage <= 0.9) {
-          lowestEntropyTile.result = '4';
+          lowestEntropyTile.result = '13';
+        } else {
+          lowestEntropyTile.result = randomVariant;
+        }
+      }
+      // Adjust chunkiness of deep water
+      if (lowestEntropyTile.variants.includes('33')) {
+        const percentage = Math.random();
+        if (percentage <= 0.9) {
+          lowestEntropyTile.result = '33';
         } else {
           lowestEntropyTile.result = randomVariant;
         }
       }
 
-      if (animateTileGeneration.checked === true) {
-        await delay(15);
-      }
-
+      await delay(15);
       draw(board, tileSize);
-
       processTile(lowestEntropyTileCoords.x, lowestEntropyTileCoords.y);
     }
   };
 
   processTile(startingTileCoords.x, startingTileCoords.y);
 };
+
+initialize();

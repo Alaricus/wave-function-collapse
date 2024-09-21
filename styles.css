@@ -1,16 +1,17 @@
 html body {
+  background-color: black;
   font-family: sans-serif;
   margin: 0;
   padding: 0;
-}
-
-canvas {
-  border: 2px solid black;
-  margin-top: 1rem;
+  overflow: hidden;
 }
 
 input[type=number] {
   width: 3rem;
+}
+
+img {
+  display: none;
 }
 
 label {
@@ -25,8 +26,9 @@ main {
   justify-content: center;
 }
 
-p {
-  font-size: small;
+span {
+  font-size: 0.85rem;
+  margin: 0.45rem 0 0 1.5rem;
   text-align: center;
 }
 
