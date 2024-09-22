@@ -318,6 +318,7 @@ const main = async () => {
       // Find the tile with lowest amount of variants and randomly select one for it to collapse into
       const lowestEntropyTileCoords = getLowestEntropyTile();
       if (!lowestEntropyTileCoords) {
+        canvas.style.animation = 'bounce 300ms linear 1';
         return;
       }
       const lowestEntropyTile = board[lowestEntropyTileCoords.y][lowestEntropyTileCoords.x];
