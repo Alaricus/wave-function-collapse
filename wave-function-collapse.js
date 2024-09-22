@@ -133,6 +133,10 @@ const draw = (board, tileSize) => {
       ctx.fillRect(x, y, w, h);
 
       if (cell.result !== null) {
+        if (cell.result === undefined) {
+          // Trying to catch a very infrequent bug, when it errors out immediately
+          console.log('Error', cell, tileCoordsXY);
+        }
         const [sx, sy] = tileCoordsXY[cell.result];
         ctx.drawImage(image, sx * tileSize, sy * tileSize, tileSize, tileSize, x, y, tileSize, tileSize);
       } else {
@@ -372,4 +376,4 @@ const main = async () => {
   processTile(startingTileCoords.x, startingTileCoords.y);
 };
 
-initialize();
+window.onload = () => initialize();
