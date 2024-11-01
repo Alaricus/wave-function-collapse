@@ -326,7 +326,7 @@ const main = async () => {
       // Find the tile with lowest amount of variants and randomly select one for it to collapse into
       const lowestEntropyTileCoords = getLowestEntropyTile();
 
-      // Thia runs when map creation is finished
+      // This runs when map creation is finished
       if (!lowestEntropyTileCoords) {
         await placeAssets(ctx, delay, assetsImage, board, assetList, width, tileSize, '16');
         await placeAssets(ctx, delay, assetsImage, board, assetList, width, tileSize, '13');
