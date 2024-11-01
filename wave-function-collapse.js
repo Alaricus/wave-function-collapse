@@ -1,4 +1,8 @@
-const image = document.querySelector('img');
+import {assets as assetList} from './assets.js';
+import { placeAssets } from './placeAssets.js';
+
+const image = document.querySelectorAll('img')[0];
+const assetsImage = document.querySelectorAll('img')[1];
 const canvas = document.querySelector('canvas');
 const ctx = canvas.getContext('2d');
 
@@ -85,7 +89,7 @@ const initialize = () => {
       edgeEnum[hash] = index;
     });
 
-    for (tile in tileTypes) {
+    for (const tile in tileTypes) {
       tileTypes[tile].n = edgeEnum[tileTypes[tile].n];
       tileTypes[tile].s = edgeEnum[tileTypes[tile].s];
       tileTypes[tile].e = edgeEnum[tileTypes[tile].e];
@@ -225,7 +229,7 @@ const main = async () => {
     }
 
     // Collapse all reset tiles that have collapsed neighbors
-    for (tile of updatedTiles) {
+    for (const tile of updatedTiles) {
       if (board?.[tile.y-1]?.[tile.x]?.result) {
         const allowed = [];
         const neighbor = board[tile.y-1][tile.x].result;
@@ -321,7 +325,14 @@ const main = async () => {
 
       // Find the tile with lowest amount of variants and randomly select one for it to collapse into
       const lowestEntropyTileCoords = getLowestEntropyTile();
+
+      // This runs when map creation is finished
       if (!lowestEntropyTileCoords) {
+        await placeAssets(ctx, delay, assetsImage, board, assetList, width, tileSize, '16');
+        await placeAssets(ctx, delay, assetsImage, board, assetList, width, tileSize, '13');
+        await placeAssets(ctx, delay, assetsImage, board, assetList, width, tileSize, '10');
+
+        // This is a CSS bounce animation
         canvas.style.animation = 'bounce 300ms linear 1';
         return;
       }
