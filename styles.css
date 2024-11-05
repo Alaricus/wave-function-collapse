@@ -3,40 +3,12 @@ html body {
   font-family: sans-serif;
   margin: 0;
   padding: 0;
+  position: relative;
   overflow: hidden;
-}
-
-input[type=number] {
-  width: 3rem;
 }
 
 img {
   display: none;
-}
-
-label {
-  background-color: dimgrey;
-  color: white;
-  margin: 0 1.5rem;
-  padding: 0.25rem 1rem;
-}
-
-main {
-  display: flex;
-  justify-content: center;
-}
-
-span {
-  font-size: 0.85rem;
-  margin: 0.45rem 0 0 1.5rem;
-  text-align: center;
-}
-
-.controls {
-  background-color: gray;
-  display: flex;
-  justify-content: center;
-  padding: 0.5rem;
 }
 
 @keyframes bounce {
